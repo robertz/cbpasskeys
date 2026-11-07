@@ -257,6 +257,14 @@ bash scripts/test.sh
 
 Or one engine: `bash scripts/test.sh lucee@6`.
 
+For line coverage of the module's code, run:
+
+```bash
+bash scripts/coverage.sh
+```
+
+It turns on Lucee's execution log for the Lucee 6 server, runs the specs, maps every executed statement back to its source line, and fails if any code line in `ModuleConfig.cfc` or `models/` never ran. TestBox's own coverage needs FusionReactor, which this doesn't. It counts lines inside functions, since Lucee doesn't log a component's pseudo-constructor. It measures lines, not every outcome of every condition.
+
 To run the table-store specs on MySQL too, put a MySQL Connector/J jar in `test-harness/lib/` and its connection in `test-harness/.env`:
 
 ```bash

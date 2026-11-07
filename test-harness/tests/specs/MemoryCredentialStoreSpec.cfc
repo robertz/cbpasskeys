@@ -13,6 +13,11 @@ component extends="testbox.system.BaseSpec" {
 				expect( store.findByCredentialId( "ABC" ).name ).toBe( "Upper" );
 				expect( store.listForUser( "1" ).map( ( c ) => c.name ) ).toBe( [ "Upper", "Lower" ] );
 				expect( store.listForUser( "1" ).len() ).toBe( 2 );
+				expect( store.updateUsage( "missing", 1, now() ) ).toBeFalse();
+				expect( store.updateUsage( "abc", 0, now() ) ).toBeTrue();
+				expect( store.updateUsage( "abc", 2, now() ) ).toBeTrue();
+				expect( store.updateUsage( "abc", 2, now() ) ).toBeFalse();
+				expect( store.updateUsage( "abc", 0, now() ) ).toBeFalse();
 				expect( store.remove( "abc" ) ).toBeTrue();
 				expect( store.remove( "abc" ) ).toBeFalse();
 				expect( isNull( store.findByCredentialId( "abc" ) ) ).toBeTrue();

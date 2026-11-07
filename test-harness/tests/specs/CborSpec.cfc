@@ -39,6 +39,21 @@ component extends="testbox.system.BaseSpec" {
 				expect( cbor.decode( hex( "c1" & "1a514b67b0" ) ) ).toBe( 1363896240 )
 			} )
 
+			it( "reads null, undefined, and half, single and double floats", () => {
+				expect( cbor.decode( hex( "f6" ) ) ).toBe( "" );
+				expect( cbor.decode( hex( "f7" ) ) ).toBe( "" );
+				expect( cbor.decode( hex( "f93e00" ) ) ).toBe( 1.5 );
+				expect( cbor.decode( hex( "f90001" ) ) * 2 ^ 24 ).toBe( 1 );
+				expect( cbor.decode( hex( "fa3fc00000" ) ) ).toBe( 1.5 );
+				expect( cbor.decode( hex( "fb3ff8000000000000" ) ) ).toBe( 1.5 );
+			} );
+
+			it( "refuses map keys that aren't simple, other simple values, and infinite halves", () => {
+				expect( () => cbor.decode( hex( "a18000" ) ) ).toThrow( "Passkeys.Invalid", "map key" );
+				expect( () => cbor.decode( hex( "e0" ) ) ).toThrow( "Passkeys.Invalid", "simple value" );
+				expect( () => cbor.decode( hex( "f97c00" ) ) ).toThrow( "Passkeys.Invalid", "simple value" );
+			} );
+
 			it( "reads the item at an offset and says where the next starts", () => {
 				var item = cbor.decodeAt( hex( "ff" & "a10102" & "00" ), 1 )
 				expect( item.value[ "1" ] ).toBe( 2 )

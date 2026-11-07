@@ -27,6 +27,34 @@ component extends="testbox.system.BaseSpec" {
 
 
 
+	private string function b64( required value ) {
+		var raw = isBinary( arguments.value ) ? arguments.value : charsetDecode( arguments.value, "utf-8" );
+		return createObject( "java", "java.util.Base64" ).getUrlEncoder().withoutPadding().encodeToString( raw );
+	}
+
+	private function unb64( required string value ) {
+		return createObject( "java", "java.util.Base64" ).getUrlDecoder().decode( arguments.value );
+	}
+
+	/** The first `size` bytes of `data`, then `tail`. */
+	private function cut( required data, required numeric size, array tail = [] ) {
+		var out = createObject( "java", "java.io.ByteArrayOutputStream" ).init();
+		out.write( arguments.data, javacast( "int", 0 ), javacast( "int", arguments.size ) );
+		for ( var b in arguments.tail ) {
+			out.write( javacast( "int", b ) );
+		}
+		return out.toByteArray();
+	}
+
+	/** register() with an answer the test shapes; returns a closure for toThrow(). */
+	private function registering( required rp, struct changes = {}, array drop = [] ) {
+		var target = arguments.rp;
+		var sessionData = {};
+		var options = target.registrationOptions( { id: "1", name: "alice" }, sessionData );
+		var answer = fake().create( options, arguments.changes, arguments.drop );
+		return () => target.register( { id: "1", name: "alice" }, sessionData, answer );
+	}
+
 	function run() {
 
 		describe( "Registration options", () => {
@@ -354,6 +382,92 @@ component extends="testbox.system.BaseSpec" {
 			} )
 
 		} )
+
+		describe( "Refusing malformed answers", () => {
+
+			it( "refuses an attestationObject that isn't a map, or that disagrees with authenticatorData", () => {
+				var rp = party();
+				expect( registering( rp, { attestationObject: "AA" } ) ).toThrow( "Passkeys.Invalid", "can't be read" );
+				var other = fake().create( { challenge: "x", user: { id: "MQ" } } ).authenticatorData;
+				expect( registering( rp, { authenticatorData: other } ) ).toThrow( "Passkeys.Invalid", "doesn't add up" );
+			} );
+
+			it( "refuses authenticatorData that is too short, or has no attested credential data", () => {
+				var rp = party();
+				expect( registering( rp, { authenticatorData: "AAAA" }, [ "attestationObject" ] ) ).toThrow( "Passkeys.Invalid", "too short" );
+				var key = fake();
+				var signIn = key.get( { challenge: "x" } ).authenticatorData;
+				expect( registering( rp, { authenticatorData: signIn }, [ "attestationObject" ] ) ).toThrow( "Passkeys.Invalid", "without its key" );
+			} );
+
+			it( "refuses a credential public key that isn't a CBOR map", () => {
+				var rp = party();
+				var sessionData = {};
+				var options = rp.registrationOptions( { id: "1", name: "alice" }, sessionData );
+				var answer = fake().create( options, {}, [ "attestationObject", "publicKey" ] );
+				var data = unb64( answer.authenticatorData );
+				var idLength = len( unb64( answer.id ) );
+				answer.authenticatorData = b64( cut( data, 55 + idLength, [ 0 ] ) );
+				expect( () => rp.register( { id: "1", name: "alice" }, sessionData, answer ) ).toThrow( "Passkeys.Invalid", "key can't be read" );
+			} );
+
+			it( "refuses clientDataJSON that isn't JSON, or comes from a cross-origin frame", () => {
+				var rp = party();
+				expect( registering( rp, { clientDataJSON: b64( "not json" ) } ) ).toThrow( "Passkeys.Invalid", "can't be read" );
+				var sessionData = {};
+				var options = rp.registrationOptions( { id: "1", name: "alice" }, sessionData );
+				var framed = '{"type":"webauthn.create","challenge":"#options.challenge#","origin":"http://localhost:5173","crossOrigin":true}';
+				var answer = fake().create( options, { clientDataJSON: b64( framed ) } );
+				expect( () => rp.register( { id: "1", name: "alice" }, sessionData, answer ) ).toThrow( "Passkeys.Invalid", "another site's frame" );
+			} );
+
+			it( "refuses fields that are missing, too long, or not base64url", () => {
+				var rp = party();
+				expect( registering( rp, {}, [ "clientDataJSON" ] ) ).toThrow( "Passkeys.Invalid", "missing clientDataJSON" );
+				expect( registering( rp, { clientDataJSON: repeatString( "A", 8001 ) } ) ).toThrow( "Passkeys.Invalid", "missing clientDataJSON" );
+				expect( registering( rp, { id: "!!!!" } ) ).toThrow( "Passkeys.Invalid", "can't be read" );
+			} );
+
+			it( "refuses a sign-in without a signature, or with one that won't parse", () => {
+				var rp = party();
+				var key = fake();
+				enrol( rp, key );
+				var sessionData = {};
+				var answer = key.get( rp.signInOptions( sessionData ) );
+				structDelete( answer, "signature" );
+				refused( rp, sessionData, answer, "missing signature" );
+				answer = key.get( rp.signInOptions( sessionData ) );
+				answer.signature = "AAAA";
+				refused( rp, sessionData, answer, "signature doesn't check out" );
+			} );
+
+			it( "refuses a stored public key that won't read", () => {
+				var store = new cbpasskeys.models.MemoryCredentialStore();
+				var rp = party( {}, store );
+				var key = fake();
+				store.add( { credentialId: key.getCredentialId(), userId: "1", publicKey: "bm90IGEga2V5", algorithm: -7, signCount: 0, transports: [], name: "Broken" } );
+				var sessionData = {};
+				refused( rp, sessionData, key.get( rp.signInOptions( sessionData ) ), "key can't be read" );
+			} );
+
+			it( "starts over when the session's challenge slot holds something else", () => {
+				var rp = party();
+				var sessionData = { passkeyChallenge: "junk" };
+				var options = rp.registrationOptions( { id: "1", name: "alice" }, sessionData );
+				expect( sessionData.passkeyChallenge.register.value ).toBe( options.challenge );
+			} );
+
+		} );
+
+		describe( "Origins", () => {
+
+			it( "takes origins as a comma-separated list", () => {
+				var rp = party( { rpId: "example.com", origins: "https://example.com, https://login.example.com/" } );
+				expect( rp.getSettings().origins ).toBe( [ "https://example.com", "https://login.example.com" ] );
+				expect( rp.originAllowed( "https://login.example.com" ) ).toBeTrue();
+			} );
+
+		} );
 
 		describe( "Origins", () => {
 
