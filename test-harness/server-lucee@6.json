@@ -1,0 +1,17 @@
+{
+    "name":"cbpasskeys-lucee6",
+    "app":{
+        "cfengine":"lucee@6",
+        "libDirs":"lib",
+        "serverHomeDirectory":".engine/lucee6"
+    },
+    "web":{
+        "http":{
+            "port":60601
+        },
+        "rewrites":{
+            "enable":false
+        }
+    },
+    "openBrowser":false
+}

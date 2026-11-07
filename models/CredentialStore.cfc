@@ -1,0 +1,25 @@
+/**
+ * Where a RelyingParty keeps passkeys. A credential is a struct:
+ * { credentialId, userId, publicKey, algorithm, signCount, transports, name, createdAt, lastUsedAt }
+ * credentialId and publicKey (SPKI) are base64url; userId is whatever your app uses, kept as a string.
+ * Compare credentialId and userId case-sensitively.
+ */
+interface {
+
+	/** The credential, or null when no such passkey is on file. */
+	function findByCredentialId( required string credentialId );
+
+	/** Every credential of the user, newest first. */
+	array function listForUser( required string userId );
+
+	void function add( required struct credential );
+
+	/**
+	 * Saves the new counter and time of use, but only while signCount is still above the stored
+	 * one (or both are 0), checked and written in one step. Returns whether it saved.
+	 */
+	boolean function updateUsage( required string credentialId, required numeric signCount, required date lastUsedAt );
+
+	boolean function remove( required string credentialId );
+
+}

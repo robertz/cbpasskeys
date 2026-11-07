@@ -1,0 +1,17 @@
+{
+    "name":"cbpasskeys-adobe2023",
+    "app":{
+        "cfengine":"adobe@2023",
+        "libDirs":"lib",
+        "serverHomeDirectory":".engine/adobe2023"
+    },
+    "web":{
+        "http":{
+            "port":60602
+        },
+        "rewrites":{
+            "enable":false
+        }
+    },
+    "openBrowser":false
+}

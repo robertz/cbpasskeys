@@ -1,0 +1,11 @@
+test-harness/coldbox/
+test-harness/testbox/
+test-harness/modules/
+test-harness/lib/
+test-harness/tests/results/
+test-harness/derby.log
+.tmp/
+.engine/
+.DS_Store
+*.log
+.env

@@ -1,0 +1,41 @@
+{
+    "name":"cbpasskeys",
+    "version":"0.1.0",
+    "author":"Robert Zehnder",
+    "slug":"cbpasskeys",
+    "shortDescription":"WebAuthn passkeys for ColdBox on Lucee and Adobe ColdFusion: registration and sign-in with JDK crypto only, attestation none.",
+    "type":"modules",
+    "keywords":[
+        "coldbox",
+        "webauthn",
+        "passkeys",
+        "fido2",
+        "authentication"
+    ],
+    "homepage":"https://github.com/robertz/cbpasskeys",
+    "repository":{
+        "type":"git",
+        "URL":"https://github.com/robertz/cbpasskeys"
+    },
+    "engines":[
+        { "type":"lucee", "version":">=6.0.0" },
+        { "type":"adobe", "version":">=2023.0.0" }
+    ],
+    "private":false,
+    "license":[
+        {
+            "type":"MIT",
+            "URL":"https://opensource.org/licenses/MIT"
+        }
+    ],
+    "dependencies":{},
+    "devDependencies":{},
+    "scripts":{
+        "preVersion":"!bash scripts/test.sh"
+    },
+    "ignore":[
+        "**/.*",
+        "test-harness/**",
+        "scripts/**"
+    ]
+}

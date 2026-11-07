@@ -1,0 +1,13 @@
+{
+    "name":"cbpasskeys-test-harness",
+    "version":"0.0.0",
+    "private":true,
+    "devDependencies":{
+        "coldbox":"^7.0.0",
+        "testbox":"^7.0.0"
+    },
+    "installPaths":{
+        "coldbox":"coldbox/",
+        "testbox":"testbox/"
+    }
+}
